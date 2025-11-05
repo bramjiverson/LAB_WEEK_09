@@ -7,7 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-// ✅ Title Text (Theme applied)
+// Title Text UI
 @Composable
 fun OnBackgroundTitleText(text: String) {
     TitleText(text = text, color = MaterialTheme.colorScheme.onBackground)
@@ -22,7 +22,7 @@ fun TitleText(text: String, color: Color) {
     )
 }
 
-// ✅ Item Text (Theme applied)
+// Item Text UI
 @Composable
 fun OnBackgroundItemText(text: String) {
     ItemText(text = text, color = MaterialTheme.colorScheme.onBackground)
@@ -37,18 +37,14 @@ fun ItemText(text: String, color: Color) {
     )
 }
 
-// ✅ Button Element
+// Primary Button UI
 @Composable
 fun PrimaryTextButton(text: String, onClick: () -> Unit) {
-    TextButton(
-        text = text,
-        textColor = Color.White,
-        onClick = onClick
-    )
+    TextButtonCustom(text = text, textColor = Color.White, onClick = onClick)
 }
 
 @Composable
-fun TextButton(text: String, textColor: Color, onClick: () -> Unit) {
+fun TextButtonCustom(text: String, textColor: Color, onClick: () -> Unit) {
     Button(
         onClick = onClick,
         modifier = Modifier.padding(8.dp),

@@ -12,76 +12,142 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.example.lab_week_09.ui.theme.LAB_WEEK_09Theme
-import com.example.lab_week_09.ui.theme.OnBackgroundItemText
-import com.example.lab_week_09.ui.theme.OnBackgroundTitleText
-import com.example.lab_week_09.ui.theme.PrimaryTextButton
 
-data class InputField(var name: String = "")
-data class Item(val name: String)
+// ✅ Navigation Imports
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import androidx.navigation.NavType
+
+// ✅ Theme
+import com.example.lab_week_09.ui.theme.*
+
+data class Student(var name: String)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             LAB_WEEK_09Theme {
-                MyApp()
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    val navController = rememberNavController()
+                    App(navController)
+                }
             }
         }
     }
 }
 
 @Composable
-fun MyApp() {
+fun App(navController: NavHostController) {
+    NavHost(
+        navController = navController,
+        startDestination = "home"
+    ) {
+        composable("home") {
+            Home { list ->
+                navController.navigate("resultContent?listData=$list")
+            }
+        }
 
-    var inputField by remember { mutableStateOf(InputField()) }
-    var listData by remember { mutableStateOf(listOf<Item>()) }
+        composable(
+            "resultContent?listData={listData}",
+            arguments = listOf(navArgument("listData") { type = NavType.StringType })
+        ) {
+            ResultContent(it.arguments?.getString("listData").orEmpty())
+        }
+    }
+}
 
-    Surface(modifier = Modifier.fillMaxSize()) {
+@Composable
+fun Home(navigateFromHomeToResult: (String) -> Unit) {
 
-        LazyColumn {
-            item {
-                Column(
+    val listData = remember { mutableStateListOf(Student("Tanu"), Student("Tina"), Student("Tono")) }
+    var inputField by remember { mutableStateOf(Student("")) }
+
+    HomeContent(
+        listData = listData,
+        inputField = inputField,
+        onInputValueChange = { inputField = inputField.copy(name = it) },
+        onButtonClick = {
+            if (inputField.name.isNotBlank()) {
+                listData.add(inputField)
+                inputField = Student("")
+            }
+        },
+        navigateFromHomeToResult = {
+            navigateFromHomeToResult(listData.toList().toString())
+        }
+    )
+}
+
+@Composable
+fun HomeContent(
+    listData: List<Student>,
+    inputField: Student,
+    onInputValueChange: (String) -> Unit,
+    onButtonClick: () -> Unit,
+    navigateFromHomeToResult: () -> Unit
+) {
+    LazyColumn {
+        item {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+
+                OnBackgroundTitleText(text = stringResource(id = R.string.enter_item))
+
+                TextField(
+                    value = inputField.name,
+                    onValueChange = { onInputValueChange(it) },
                     modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                )
 
-                    // Title text
-                    OnBackgroundTitleText(text = stringResource(id = R.string.enter_item))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PrimaryTextButton(text = stringResource(id = R.string.button_click)) {
+                        onButtonClick()
+                    }
 
-                    // TextField WITHOUT keyboardOptions
-                    TextField(
-                        value = inputField.name,
-                        onValueChange = { inputField = InputField(it) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp)
-                    )
-
-                    // Submit button
-                    PrimaryTextButton(
-                        text = stringResource(id = R.string.button_click)
-                    ) {
-                        if (inputField.name.isNotBlank()) {
-                            listData = listData + Item(inputField.name)
-                            inputField = InputField("")
-                        }
+                    PrimaryTextButton(text = stringResource(id = R.string.button_navigate)) {
+                        navigateFromHomeToResult()
                     }
                 }
             }
+        }
 
-            items(listData) { item ->
-                Column(
-                    modifier = Modifier
-                        .padding(vertical = 4.dp)
-                        .fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    OnBackgroundItemText(text = item.name)
-                }
+        items(listData) { item ->
+            Column(
+                modifier = Modifier
+                    .padding(vertical = 4.dp)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                OnBackgroundItemText(text = item.name)
             }
         }
+    }
+}
+
+@Composable
+fun ResultContent(listData: String) {
+    Column(
+        modifier = Modifier
+            .padding(16.dp)
+            .fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        OnBackgroundTitleText("Result Page")
+        Spacer(modifier = Modifier.height(12.dp))
+        OnBackgroundItemText(listData)
     }
 }
