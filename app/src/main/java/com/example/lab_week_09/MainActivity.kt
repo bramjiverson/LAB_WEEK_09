@@ -4,150 +4,101 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-
-// ✅ Navigation Imports
-import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import androidx.navigation.NavType
-
-// ✅ Theme
-import com.example.lab_week_09.ui.theme.*
-
-data class Student(var name: String)
+import androidx.navigation.NavHostController
+import com.squareup.moshi.JsonAdapter
+import java.net.URLEncoder
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            LAB_WEEK_09Theme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    val navController = rememberNavController()
-                    App(navController)
-                }
-            }
+            MyApp()
         }
     }
 }
 
 @Composable
-fun App(navController: NavHostController) {
-    NavHost(
-        navController = navController,
-        startDestination = "home"
-    ) {
+fun MyApp() {
+    val navController = rememberNavController()
+
+    NavHost(navController = navController, startDestination = "home") {
         composable("home") {
-            Home { list ->
-                navController.navigate("resultContent?listData=$list")
-            }
+            HomeScreen(navController)
         }
 
         composable(
-            "resultContent?listData={listData}",
-            arguments = listOf(navArgument("listData") { type = NavType.StringType })
-        ) {
-            ResultContent(it.arguments?.getString("listData").orEmpty())
+            "detail/{studentJson}",
+            arguments = listOf(navArgument("studentJson") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val json = backStackEntry.arguments?.getString("studentJson")
+            val adapter: JsonAdapter<Student> = MoshiInstance.moshi.adapter(Student::class.java)
+            val student = json?.let { adapter.fromJson(URLDecoder.decode(it, "UTF-8")) }
+            student?.let { DetailScreen(it) }
         }
     }
 }
 
 @Composable
-fun Home(navigateFromHomeToResult: (String) -> Unit) {
+fun HomeScreen(navController: NavHostController) {
+    val nameState = remember { mutableStateOf("") }
+    val ageState = remember { mutableStateOf("") }
 
-    val listData = remember { mutableStateListOf(Student("Tanu"), Student("Tina"), Student("Tono")) }
-    var inputField by remember { mutableStateOf(Student("")) }
+    val adapter: JsonAdapter<Student> = MoshiInstance.moshi.adapter(Student::class.java)
 
-    HomeContent(
-        listData = listData,
-        inputField = inputField,
-        onInputValueChange = { inputField = inputField.copy(name = it) },
-        onButtonClick = {
-            if (inputField.name.isNotBlank()) {
-                listData.add(inputField)
-                inputField = Student("")
-            }
-        },
-        navigateFromHomeToResult = {
-            navigateFromHomeToResult(listData.toList().toString())
-        }
-    )
-}
-
-@Composable
-fun HomeContent(
-    listData: List<Student>,
-    inputField: Student,
-    onInputValueChange: (String) -> Unit,
-    onButtonClick: () -> Unit,
-    navigateFromHomeToResult: () -> Unit
-) {
-    LazyColumn {
-        item {
-            Column(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-
-                OnBackgroundTitleText(text = stringResource(id = R.string.enter_item))
-
-                TextField(
-                    value = inputField.name,
-                    onValueChange = { onInputValueChange(it) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp)
-                )
-
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    PrimaryTextButton(text = stringResource(id = R.string.button_click)) {
-                        onButtonClick()
-                    }
-
-                    PrimaryTextButton(text = stringResource(id = R.string.button_navigate)) {
-                        navigateFromHomeToResult()
-                    }
-                }
-            }
-        }
-
-        items(listData) { item ->
-            Column(
-                modifier = Modifier
-                    .padding(vertical = 4.dp)
-                    .fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                OnBackgroundItemText(text = item.name)
-            }
-        }
-    }
-}
-
-@Composable
-fun ResultContent(listData: String) {
     Column(
         modifier = Modifier
-            .padding(16.dp)
-            .fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center
     ) {
-        OnBackgroundTitleText("Result Page")
-        Spacer(modifier = Modifier.height(12.dp))
-        OnBackgroundItemText(listData)
+        TextField(
+            value = nameState.value,
+            onValueChange = { nameState.value = it },
+            label = { Text("Name") }
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        TextField(
+            value = ageState.value,
+            onValueChange = { ageState.value = it },
+            label = { Text("Age") }
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(
+            onClick = {
+                val student = Student(nameState.value, ageState.value.toIntOrNull() ?: 0)
+                val json = adapter.toJson(student)
+                val encoded = URLEncoder.encode(json, StandardCharsets.UTF_8.toString())
+                navController.navigate("detail/$encoded")
+            },
+            enabled = nameState.value.isNotEmpty() && ageState.value.isNotEmpty()
+        ) {
+            Text("Submit")
+        }
+    }
+}
+
+@Composable
+fun DetailScreen(student: Student) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("Student Detail", style = MaterialTheme.typography.headlineMedium)
+        Spacer(modifier = Modifier.height(16.dp))
+        Text("Name: ${student.name}")
+        Text("Age: ${student.age}")
     }
 }
